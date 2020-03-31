@@ -15,7 +15,7 @@ PWD = '' # sender auth password
 SUBSCRIBER = '' # subscriber mail address
 
 
-class EventIsOver(Exception):
+class EventNotOpen(Exception):
     pass
 
 
@@ -30,7 +30,7 @@ class FEH_VotingGauntlet:
         self.current_battles = [
             battle for battle in all_battles if 'win' not in str(battle)]
         if self.current_battles == []:
-            raise EventIsOver
+            raise EventNotOpen
 
     @property
     def current_round(self):
@@ -48,6 +48,8 @@ class FEH_VotingGauntlet:
         situation = []
         for battle in self.current_battles:
             content = [p.text for p in battle.find_all('p')]
+            if content[1] == '':
+                raise EventNotOpen
             situation.append(
                 f'{content[0]:　<8}{content[1]:>15}    VS    {content[2]:　<8}{content[3]:>15}')
         return '\n'.join(situation)
@@ -59,7 +61,6 @@ def emailResult(feh: FEH_VotingGauntlet):
     msg['From'] = SENDER
     msg['To'] = SUBSCRIBER
     content = F'{feh.current_situation}\n\n{feh.timestamp}'
-    print(content)
     msg.set_content(content)
     with smtplib.SMTP(SMTP_SERVER, SMTP_SERVER_PORT) as s:
         s.starttls()
@@ -70,5 +71,5 @@ def emailResult(feh: FEH_VotingGauntlet):
 if __name__ == '__main__':
     try:
         emailResult(FEH_VotingGauntlet())
-    except EventIsOver:
+    except EventNotOpen:
         pass
