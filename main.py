@@ -1,18 +1,26 @@
 #!/usr/bin/env python3
 
-import datetime
 import smtplib
 import time
+from datetime import datetime
 from email.message import EmailMessage
 
 import requests
 from bs4 import BeautifulSoup
+from pymongo import MongoClient
 
-SENDER = '' # sender mail address
-SMTP_SERVER = '' #sender smtp server
-SMTP_SERVER_PORT = 587 #sender smtp server port
-PWD = '' # sender auth password
-SUBSCRIBER = '' # subscriber mail address
+SENDER = ''  # sender mail address
+SMTP_SERVER = ''  # sender smtp server
+SMTP_SERVER_PORT = 587  # sender smtp server port
+PWD = ''  # sender auth password
+SUBSCRIBER = ''  # subscriber mail address
+
+MONGO_SERVER = 'localhost'  # mongodb server address
+MONGO_PORT = 27017  # mongodb server port
+MONGO_DATABASE = 'feh'  # mongodb database
+MONGO_COLLECTION = 'feh'  # mongodb collection
+MONGO_AUTH = None  # mongodb auth username
+MONGO_PASSWORD = None  # mongodb auth password
 
 
 class EventNotOpen(Exception):
@@ -21,7 +29,9 @@ class EventNotOpen(Exception):
 
 class FEH_VotingGauntlet:
     def __init__(self):
-        self.timestamp = datetime.datetime.now().strftime('%Y%m%d %H:00:00')
+        self.date = datetime.now()
+        self.hour = str(datetime.now().hour)
+        self.timestamp = f"{self.date.strftime(f'%Y%m%d')} {self.hour}:00:00"
         respone = requests.get(
             'https://support.fire-emblem-heroes.com/voting_gauntlet/current')
         self.current_event = respone.url.split('/')[-1]
@@ -40,28 +50,47 @@ class FEH_VotingGauntlet:
             if 'tournament' in c:
                 current = c.split('-')[-1]
                 break
-        Round = {'01': 'Round1', '02': 'Round2', '03': 'Final Round'}
-        return Round[current]
+        return str(int(current))
 
     @property
-    def current_situation(self):
-        situation = []
+    def current_scoreboard(self):
+        scoreboard = []
         for battle in self.current_battles:
             content = [p.text for p in battle.find_all('p')]
             if content[1] == '':
                 raise EventNotOpen
-            situation.append(
-                f'{content[0]:　<8}{content[1]:>15}    VS    {content[2]:　<8}{content[3]:>15}')
-        return '\n'.join(situation)
+            scoreboard.append([
+                {'hero': content[0], 'score':int(content[1].replace(',', ''))},
+                {'hero': content[2], 'score':int(content[3].replace(',', ''))}
+            ])
+        return scoreboard
 
 
-def emailResult(feh: FEH_VotingGauntlet):
+def formatter(battle):
+    return f"{battle[0]['hero']:　<8}{battle[0]['score']:>15,d}    VS    {battle[1]['hero']:　<8}{battle[1]['score']:>15,d}"
+
+
+def mongo(feh: FEH_VotingGauntlet):
+    try:
+        with MongoClient(MONGO_SERVER, MONGO_PORT, username=MONGO_AUTH, password=MONGO_PASSWORD) as client:
+            collection = client[MONGO_DATABASE][MONGO_COLLECTION]
+            query = {'event': feh.current_event, 'round': feh.current_round,
+                     'date': feh.date.strftime(f'%Y-%m-%d'), 'hour': feh.hour}
+            collection.update_one(
+                query, {'$set': {'scoreboard': feh.current_scoreboard}}, True)
+    except:
+        pass
+
+
+def mail(feh: FEH_VotingGauntlet):
+    Round = {'1': 'Round1', '2': 'Round2', '3': 'Final Round'}
     msg = EmailMessage()
-    msg['Subject'] = f'FEH 投票大戦第{feh.current_event}回 {feh.current_round} - {feh.timestamp}'
+    msg['Subject'] = f'FEH 投票大戦第{feh.current_event}回 {Round[feh.current_round]} - {feh.timestamp}'
     msg['From'] = SENDER
     msg['To'] = SUBSCRIBER
-    content = F'{feh.current_situation}\n\n{feh.timestamp}'
-    msg.set_content(content)
+    content = '\n'.join([formatter(battle)
+                         for battle in feh.current_scoreboard])
+    msg.set_content(f'{content}\n\n{feh.timestamp}')
     with smtplib.SMTP(SMTP_SERVER, SMTP_SERVER_PORT) as s:
         s.starttls()
         s.login(SENDER, PWD)
@@ -70,6 +99,8 @@ def emailResult(feh: FEH_VotingGauntlet):
 
 if __name__ == '__main__':
     try:
-        emailResult(FEH_VotingGauntlet())
+        feh = FEH_VotingGauntlet()
+        mongo(feh)
+        mail(feh)
     except EventNotOpen:
         pass
