@@ -32,8 +32,16 @@ class FEH_VotingGauntlet:
         self.date = datetime.now()
         self.hour = str(datetime.now().hour)
         self.timestamp = f"{self.date.strftime(f'%Y%m%d')} {self.hour}:00:00"
-        respone = requests.get(
-            'https://support.fire-emblem-heroes.com/voting_gauntlet/current')
+        for _ in range(5):
+            try:
+                respone = requests.get(
+                    'https://support.fire-emblem-heroes.com/voting_gauntlet/current', timeout=10)
+                break
+            except:
+                respone = None
+                sleep(5)
+        if not respone:
+            raise requests.exceptions.ReadTimeout
         self.current_event = respone.url.split('/')[-1]
         all_battles = BeautifulSoup(respone.content, 'html.parser').find_all(
             'li', class_='tournaments-battle')
