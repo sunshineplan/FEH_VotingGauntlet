@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 import smtplib
-import time
 from datetime import datetime
 from email.message import EmailMessage
+from time import sleep
 
 import requests
 from bs4 import BeautifulSoup
@@ -74,10 +74,11 @@ def mongo(feh: FEH_VotingGauntlet):
     try:
         with MongoClient(MONGO_SERVER, MONGO_PORT, username=MONGO_AUTH, password=MONGO_PASSWORD) as client:
             collection = client[MONGO_DATABASE][MONGO_COLLECTION]
-            query = {'event': feh.current_event, 'round': feh.current_round,
-                     'date': feh.date.strftime(f'%Y-%m-%d'), 'hour': feh.hour}
-            collection.update_one(
-                query, {'$set': {'scoreboard': feh.current_scoreboard}}, True)
+            update = {'event': feh.current_event, 'round': feh.current_round,
+                      'date': feh.date.strftime(f'%Y-%m-%d'), 'hour': feh.hour}
+            for battle in feh.current_scoreboard:
+                collection.update_one(
+                    {'scoreboard': battle}, {'$set': update}, True)
     except:
         pass
 
