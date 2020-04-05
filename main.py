@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import smtplib
-from datetime import datetime
+from datetime import date, datetime, time
 from email.message import EmailMessage
 from time import sleep
 
@@ -29,9 +29,8 @@ class EventNotOpen(Exception):
 
 class FEH_VotingGauntlet:
     def __init__(self):
-        self.date = datetime.now()
+        self.date = datetime.combine(date.today(), time.min)
         self.hour = str(datetime.now().hour)
-        self.timestamp = f"{self.date.strftime(f'%Y%m%d')} {self.hour}:00:00"
         for _ in range(5):
             try:
                 respone = requests.get(
@@ -83,7 +82,7 @@ def mongo(feh: FEH_VotingGauntlet):
         with MongoClient(MONGO_SERVER, MONGO_PORT, username=MONGO_AUTH, password=MONGO_PASSWORD) as client:
             collection = client[MONGO_DATABASE][MONGO_COLLECTION]
             update = {'event': feh.current_event, 'round': feh.current_round,
-                      'date': feh.date.strftime(f'%Y-%m-%d'), 'hour': feh.hour}
+                      'date': feh.date, 'hour': feh.hour}
             for battle in feh.current_scoreboard:
                 collection.update_one(
                     {'scoreboard': battle}, {'$set': update}, True)
@@ -93,13 +92,14 @@ def mongo(feh: FEH_VotingGauntlet):
 
 def mail(feh: FEH_VotingGauntlet):
     Round = {'1': 'Round1', '2': 'Round2', '3': 'Final Round'}
+    timestamp = f"{feh.date.strftime(f'%Y%m%d')} {feh.hour}:00:00"
     msg = EmailMessage()
-    msg['Subject'] = f'FEH 投票大戦第{feh.current_event}回 {Round[feh.current_round]} - {feh.timestamp}'
+    msg['Subject'] = f'FEH 投票大戦第{feh.current_event}回 {Round[feh.current_round]} - {timestamp}'
     msg['From'] = SENDER
     msg['To'] = SUBSCRIBER
     content = '\n'.join([formatter(battle)
                          for battle in feh.current_scoreboard])
-    msg.set_content(f'{content}\n\n{feh.timestamp}')
+    msg.set_content(f'{content}\n\n{timestamp}')
     with smtplib.SMTP(SMTP_SERVER, SMTP_SERVER_PORT) as s:
         s.starttls()
         s.login(SENDER, PWD)
