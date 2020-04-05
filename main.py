@@ -31,7 +31,7 @@ class EventNotOpen(Exception):
 class FEH_VotingGauntlet:
     def __init__(self):
         self.date = datetime.combine(date.today(), time.min)
-        self.hour = str(datetime.now().hour)
+        self.hour = datetime.now().hour
         for _ in range(5):
             try:
                 respone = requests.get(
@@ -42,7 +42,7 @@ class FEH_VotingGauntlet:
                 sleep(5)
         if not respone:
             raise requests.exceptions.ReadTimeout
-        self.current_event = respone.url.split('/')[-1]
+        self.current_event = int(respone.url.split('/')[-1])
         all_battles = BeautifulSoup(respone.content, 'html.parser').find_all(
             'li', class_='tournaments-battle')
         self.current_battles = [
@@ -58,7 +58,7 @@ class FEH_VotingGauntlet:
             if 'tournament' in c:
                 current = c.split('-')[-1]
                 break
-        return str(int(current))
+        return int(current)
 
     @property
     def current_scoreboard(self):
@@ -96,7 +96,7 @@ def mongo(feh: FEH_VotingGauntlet):
 
 
 def mail(feh: FEH_VotingGauntlet):
-    Round = {'1': 'Round1', '2': 'Round2', '3': 'Final Round'}
+    Round = {1: 'Round1', 2: 'Round2', 3: 'Final Round'}
     timestamp = f"{feh.date.strftime(f'%Y%m%d')} {feh.hour}:00:00"
     msg = EmailMessage()
     msg['Subject'] = f'FEH 投票大戦第{feh.current_event}回 {Round[feh.current_round]} - {timestamp}'
