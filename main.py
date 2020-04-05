@@ -4,6 +4,7 @@ import smtplib
 from datetime import date, datetime, time
 from email.message import EmailMessage
 from time import sleep
+from urllib.parse import quote
 
 import requests
 from bs4 import BeautifulSoup
@@ -78,8 +79,12 @@ def formatter(battle):
 
 
 def mongo(feh: FEH_VotingGauntlet):
+    if MONGO_AUTH:
+        URI = f"mongodb://{quote(MONGO_AUTH, safe='')}@{quote(MONGO_PASSWORD, safe='')}{MONGO_SERVER}:{MONGO_PORT}/{MONGO_DATABASE}"
+    else:
+        URI = f'mongodb://{MONGO_SERVER}:{MONGO_PORT}'
     try:
-        with MongoClient(MONGO_SERVER, MONGO_PORT, username=MONGO_AUTH, password=MONGO_PASSWORD) as client:
+        with MongoClient(URI) as client:
             collection = client[MONGO_DATABASE][MONGO_COLLECTION]
             update = {'event': feh.current_event, 'round': feh.current_round,
                       'date': feh.date, 'hour': feh.hour}
