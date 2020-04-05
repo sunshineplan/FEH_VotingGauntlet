@@ -80,7 +80,7 @@ def formatter(battle):
 
 def mongo(feh: FEH_VotingGauntlet):
     if MONGO_AUTH:
-        URI = f"mongodb://{quote(MONGO_AUTH, safe='')}@{quote(MONGO_PASSWORD, safe='')}{MONGO_SERVER}:{MONGO_PORT}/{MONGO_DATABASE}"
+        URI = f"mongodb://{quote(MONGO_AUTH, safe='')}:{quote(MONGO_PASSWORD, safe='')}@{MONGO_SERVER}:{MONGO_PORT}/{MONGO_DATABASE}"
     else:
         URI = f'mongodb://{MONGO_SERVER}:{MONGO_PORT}'
     try:
