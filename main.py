@@ -4,7 +4,7 @@ import smtplib
 from datetime import date, datetime, time
 from email.message import EmailMessage
 from time import sleep
-from urllib.parse import quote
+from urllib.parse import quote_plus
 
 import requests
 from bs4 import BeautifulSoup
@@ -100,8 +100,8 @@ def formatter(battle):
 
 def mongo(feh: FEH_VotingGauntlet):
     if MONGO_AUTH:
-        username = quote(MONGO_AUTH, safe='')
-        password = quote(MONGO_PASSWORD, safe='')
+        username = quote_plus(MONGO_AUTH)
+        password = quote_plus(MONGO_PASSWORD)
         URI = f"mongodb://{username}:{password}@{MONGO_SERVER}:{MONGO_PORT}/{MONGO_DATABASE}"
     else:
         URI = f'mongodb://{MONGO_SERVER}:{MONGO_PORT}'
