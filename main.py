@@ -91,7 +91,11 @@ class FEH_VotingGauntlet:
 
 
 def formatter(battle):
-    return f"{battle[0]['hero']:　<8}{battle[0]['score']:>15,d}    VS    {battle[1]['hero']:　<8}{battle[1]['score']:>15,d}"
+    hero1 = battle[0]['hero']
+    score1 = battle[0]['score']
+    hero2 = battle[1]['hero']
+    score2 = battle[1]['score']
+    return f"{hero1:　<8}{score1:>15,d}    VS    {hero2:　<8}{score2:>15,d}"
 
 
 def mongo(feh: FEH_VotingGauntlet):
