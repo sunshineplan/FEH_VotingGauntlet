@@ -8,6 +8,7 @@ from urllib.parse import quote
 
 import requests
 from bs4 import BeautifulSoup
+
 try:
     from pymongo import MongoClient
 except:
@@ -46,34 +47,46 @@ class FEH_VotingGauntlet:
         if not respone:
             raise requests.exceptions.ReadTimeout
         self.current_event = int(respone.url.split('/')[-1])
-        all_battles = BeautifulSoup(respone.content, 'html.parser').find_all(
+        self.all_battles = BeautifulSoup(respone.content, 'html.parser').find_all(
             'li', class_='tournaments-battle')
-        self.current_battles = [
-            battle for battle in all_battles if 'win' not in str(battle)]
-        if self.current_battles == []:
-            raise EventNotOpen
+        self.scoreboard = self.get_scoreboard()
 
-    @property
-    def current_round(self):
-        classes = self.current_battles[0].find_parent(
-            'article').find('h2')['class']
+    @staticmethod
+    def get_round(battle):
+        current = 0
+        classes = battle.find_parent('article').find('h2')['class']
         for c in classes:
             if 'tournament' in c:
                 current = c.split('-')[-1]
                 break
         return int(current)
 
-    @property
-    def current_scoreboard(self):
-        scoreboard = []
-        for battle in self.current_battles:
+    def get_scoreboard(self):
+        scoreboard = {}
+        for battle in self.all_battles:
+            Round = self.get_round(battle)
+            try:
+                scoreboard[Round]
+            except KeyError:
+                scoreboard[Round] = []
             content = [p.text for p in battle.find_all('p')]
             if content[1] == '':
-                raise EventNotOpen
-            scoreboard.append([
+                continue
+            scoreboard[Round].append([
                 {'hero': content[0], 'score':int(content[1].replace(',', ''))},
                 {'hero': content[2], 'score':int(content[3].replace(',', ''))}
             ])
+        return scoreboard
+
+    @property
+    def current_round(self):
+        return max(self.scoreboard.keys())
+
+    @property
+    def current_scoreboard(self):
+        scoreboard = self.scoreboard[self.current_round]
+        if scoreboard == [] or [b for b in self.all_battles if 'win' not in str(b)] == []:
+            raise EventNotOpen
         return scoreboard
 
 
@@ -83,17 +96,22 @@ def formatter(battle):
 
 def mongo(feh: FEH_VotingGauntlet):
     if MONGO_AUTH:
-        URI = f"mongodb://{quote(MONGO_AUTH, safe='')}:{quote(MONGO_PASSWORD, safe='')}@{MONGO_SERVER}:{MONGO_PORT}/{MONGO_DATABASE}"
+        username = quote(MONGO_AUTH, safe='')
+        password = quote(MONGO_PASSWORD, safe='')
+        URI = f"mongodb://{username}:{password}@{MONGO_SERVER}:{MONGO_PORT}/{MONGO_DATABASE}"
     else:
         URI = f'mongodb://{MONGO_SERVER}:{MONGO_PORT}'
     try:
         with MongoClient(URI) as client:
             collection = client[MONGO_DATABASE][MONGO_COLLECTION]
-            update = {'event': feh.current_event, 'round': feh.current_round,
+            update = {'event': feh.current_event,
                       'date': feh.date, 'hour': feh.hour}
-            for battle in feh.current_scoreboard:
-                collection.update_one(
-                    {'scoreboard': battle}, {'$set': update}, True)
+            all_scoreboard = feh.scoreboard
+            for Round in all_scoreboard:
+                update['round'] = Round
+                for battle in all_scoreboard[Round]:
+                    collection.update_one(
+                        {'scoreboard': battle}, {'$setOnInsert': update}, True)
     except:
         pass
 
