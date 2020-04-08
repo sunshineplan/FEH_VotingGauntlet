@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import configparser
 import smtplib
 from datetime import date, datetime, time
 from email.message import EmailMessage
@@ -14,18 +15,21 @@ try:
 except:
     pass
 
-SENDER = ''  # sender mail address
-SMTP_SERVER = ''  # sender smtp server
-SMTP_SERVER_PORT = 587  # sender smtp server port
-PWD = ''  # sender auth password
-SUBSCRIBER = ''  # subscriber mail address
+config = configparser.ConfigParser(allow_no_value=True)
+config.read('config.ini')
 
-MONGO_SERVER = 'localhost'  # mongodb server address
-MONGO_PORT = 27017  # mongodb server port
-MONGO_DATABASE = 'feh'  # mongodb database
-MONGO_COLLECTION = 'feh'  # mongodb collection
-MONGO_AUTH = None  # mongodb auth username
-MONGO_PASSWORD = None  # mongodb auth password
+SENDER = config.get('email', 'SENDER')
+SMTP_SERVER = config.get('email', 'SMTP_SERVER')
+SMTP_SERVER_PORT = config.getint('email', 'SMTP_SERVER_PORT', fallback=587)
+PWD = config.get('email', 'PWD')
+SUBSCRIBER = config.get('email', 'SUBSCRIBER')
+
+MONGO_SERVER = config.get('mongodb', 'SERVER', fallback='localhost')
+MONGO_PORT = config.getint('mongodb', 'PORT', fallback=27017)
+MONGO_DATABASE = config.get('mongodb', 'DATABASE', fallback='feh')
+MONGO_COLLECTION = config.get('mongodb', 'COLLECTION', fallback='feh')
+MONGO_AUTH = config.get('mongodb', 'AUTH')
+MONGO_PASSWORD = config.get('mongodb', 'PASSWORD')
 
 
 class EventNotOpen(Exception):
