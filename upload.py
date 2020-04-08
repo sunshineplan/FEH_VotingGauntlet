@@ -92,10 +92,11 @@ if __name__ == '__main__':
     pipeline.append({'$addFields': {'tmp': '$scoreboard'}})
     pipeline.append({'$unwind': '$tmp'})
     pipeline.append({'$group': {'_id': {'r': '$round', 'h': '$tmp.hero'},
-                                's': {'$max': '$scoreboard'}}})
-    pipeline.append({'$group': {'_id': {'r': '$_id.r', 's': '$s'}}})
+                                's': {'$max': '$scoreboard'}, 'd': {'$max': '$date'}}})
     pipeline.append(
-        {'$project': {'_id': 0, 'round': '$_id.r', 'scoreboard': '$_id.s'}})
+        {'$group': {'_id': {'d': '$d', 'r': '$_id.r', 's': '$s'}}})
+    pipeline.append(
+        {'$project': {'_id': 0, 'date': '$_id.d', 'round': '$_id.r', 'scoreboard': '$_id.s'}})
     pipeline.append({'$sort': {'round': 1, 'scoreboard': 1}})
     data = query(pipeline, mode='aggregate')
     respone = commit(name, converter(data))
