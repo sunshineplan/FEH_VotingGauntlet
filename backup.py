@@ -26,7 +26,7 @@ MONGO_PASSWORD = config.get('mongodb', 'PASSWORD')
 if __name__ == '__main__':
     command = f'mongodump -h{MONGO_SERVER}:{MONGO_PORT} -d{MONGO_DATABASE} -c{MONGO_COLLECTION} -u{MONGO_AUTH} -p{MONGO_PASSWORD} --gzip --archive'
     attachment = BytesIO()
-    attachment.write(check_output(command))
+    attachment.write(check_output(command, shell=True))
     msg = EmailMessage()
     msg['Subject'] = f'FEH Backup-{datetime.now():%Y%m%d}'
     msg['From'] = SENDER
@@ -37,3 +37,4 @@ if __name__ == '__main__':
         s.starttls()
         s.login(SENDER, PWD)
         s.send_message(msg)
+    print('Backup FEH done.')
