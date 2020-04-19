@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 import configparser
-import smtplib
 from datetime import date, datetime, time
 from email.message import EmailMessage
+from smtplib import SMTP
 from time import sleep
 from urllib.parse import quote_plus
 
@@ -18,18 +18,22 @@ except:
 config = configparser.ConfigParser(allow_no_value=True)
 config.read('config.ini')
 
-SENDER = config.get('email', 'SENDER')
-SMTP_SERVER = config.get('email', 'SMTP_SERVER')
-SMTP_SERVER_PORT = config.getint('email', 'SMTP_SERVER_PORT', fallback=587)
-PWD = config.get('email', 'PWD')
-SUBSCRIBER = config.get('email', 'SUBSCRIBER')
+SUBSCRIBE = {
+    'sender': config.get('email', 'SENDER'),
+    'smtp_server': config.get('email', 'SMTP_SERVER'),
+    'smtp_server_port': config.getint('email', 'SMTP_SERVER_PORT', fallback=587),
+    'password': config.get('email', 'PWD'),
+    'subscriber': config.get('email', 'SUBSCRIBER')
+}
 
-MONGO_SERVER = config.get('mongodb', 'SERVER', fallback='localhost')
-MONGO_PORT = config.getint('mongodb', 'PORT', fallback=27017)
-MONGO_DATABASE = config.get('mongodb', 'DATABASE', fallback='feh')
-MONGO_COLLECTION = config.get('mongodb', 'COLLECTION', fallback='feh')
-MONGO_AUTH = config.get('mongodb', 'AUTH')
-MONGO_PASSWORD = config.get('mongodb', 'PASSWORD')
+MONGO = {
+    'server': config.get('mongodb', 'SERVER', fallback='localhost'),
+    'port': config.getint('mongodb', 'PORT', fallback=27017),
+    'database': config.get('mongodb', 'DATABASE', fallback='feh'),
+    'collection': config.get('mongodb', 'COLLECTION', fallback='feh'),
+    'username': config.get('mongodb', 'AUTH'),
+    'password': config.get('mongodb', 'PASSWORD')
+}
 
 
 class EventNotOpen(Exception):
@@ -103,15 +107,20 @@ def formatter(battle):
 
 
 def mongo(feh: FEH_VotingGauntlet):
-    if MONGO_AUTH:
-        username = quote_plus(MONGO_AUTH)
-        password = quote_plus(MONGO_PASSWORD)
-        URI = f"mongodb://{username}:{password}@{MONGO_SERVER}:{MONGO_PORT}/{MONGO_DATABASE}"
+    try:
+        from metadata import metadata
+        MONGO = metadata('feh_mongo', ERROR_IF_NONE=True)
+    except:
+        pass
+    if MONGO['auth']:
+        username = quote_plus(MONGO['username'])
+        password = quote_plus(MONGO['password'])
+        URI = f"mongodb://{username}:{password}@{MONGO['server']}:{MONGO['port']}/{MONGO['database']}"
     else:
-        URI = f'mongodb://{MONGO_SERVER}:{MONGO_PORT}'
+        URI = f"mongodb://{MONGO['server']}:{MONGO['port']}"
     try:
         with MongoClient(URI) as client:
-            collection = client[MONGO_DATABASE][MONGO_COLLECTION]
+            collection = client[MONGO['database']][MONGO['collection']]
             update = {'event': feh.current_event,
                       'date': feh.date, 'hour': feh.hour}
             all_scoreboard = feh.scoreboard
@@ -125,18 +134,23 @@ def mongo(feh: FEH_VotingGauntlet):
 
 
 def mail(feh: FEH_VotingGauntlet):
+    try:
+        from metadata import metadata
+        SUBSCRIBE = metadata('feh_subscribe', ERROR_IF_NONE=True)
+    except:
+        pass
     Round = {1: 'Round1', 2: 'Round2', 3: 'Final Round'}
     timestamp = f"{feh.date.strftime(f'%Y%m%d')} {feh.hour}:00:00"
     msg = EmailMessage()
     msg['Subject'] = f'FEH 投票大戦第{feh.current_event}回 {Round[feh.current_round]} - {timestamp}'
-    msg['From'] = SENDER
-    msg['To'] = SUBSCRIBER
+    msg['From'] = SUBSCRIBE['sender']
+    msg['To'] = SUBSCRIBE['subscriber']
     content = '\n'.join([formatter(battle)
                          for battle in feh.current_scoreboard])
     msg.set_content(f'{content}\n\n{timestamp}')
-    with smtplib.SMTP(SMTP_SERVER, SMTP_SERVER_PORT) as s:
+    with SMTP(SUBSCRIBE['smtp_server'], SUBSCRIBE['smtp_server_port']) as s:
         s.starttls()
-        s.login(SENDER, PWD)
+        s.login(SUBSCRIBE['sender'], SUBSCRIBE['password'])
         s.send_message(msg)
 
 

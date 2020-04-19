@@ -12,38 +12,53 @@ from pymongo import MongoClient
 config = configparser.ConfigParser(allow_no_value=True)
 config.read('config.ini')
 
-MONGO_SERVER = config.get('mongodb', 'SERVER', fallback='localhost')
-MONGO_PORT = config.getint('mongodb', 'PORT', fallback=27017)
-MONGO_DATABASE = config.get('mongodb', 'DATABASE', fallback='feh')
-MONGO_COLLECTION = config.get('mongodb', 'COLLECTION', fallback='feh')
-MONGO_AUTH = config.get('mongodb', 'AUTH')
-MONGO_PASSWORD = config.get('mongodb', 'PASSWORD')
+MONGO = {
+    'server': config.get('mongodb', 'SERVER', fallback='localhost'),
+    'port': config.getint('mongodb', 'PORT', fallback=27017),
+    'database': config.get('mongodb', 'DATABASE', fallback='feh'),
+    'collection': config.get('mongodb', 'COLLECTION', fallback='feh'),
+    'username': config.get('mongodb', 'AUTH'),
+    'password': config.get('mongodb', 'PASSWORD')
+}
 
-GITHUB_TOKEN = config.get('github', 'TOKEN')
-GITHUB_USER = config.get('github', 'USER')
-GITHUB_REPO = config.get('github', 'REPO')
-PATH = config.get('github', 'PATH')
-PROXY = config.get('github', 'PROXY')
+GITHUB = {
+    'token': config.get('github', 'TOKEN'),
+    'user': config.get('github', 'USER'),
+    'repo': config.get('github', 'REPO'),
+    'path': config.get('github', 'PATH')
+}
+
+PROXY = config.get('proxy', 'PROXY')
 
 
 def query(filter_or_pipeline=None, projection=None, sort=None, limit=0, mode='find'):
-    if MONGO_AUTH:
-        username = quote_plus(MONGO_AUTH)
-        password = quote_plus(MONGO_PASSWORD)
-        URI = f"mongodb://{username}:{password}@{MONGO_SERVER}:{MONGO_PORT}/{MONGO_DATABASE}"
+    try:
+        from metadata import metadata
+        MONGO = metadata('feh_mongo', ERROR_IF_NONE=True)
+    except:
+        pass
+    if MONGO['username']:
+        username = quote_plus(MONGO['username'])
+        password = quote_plus(MONGO['password'])
+        URI = f"mongodb://{username}:{password}@{MONGO['server']}:{MONGO['port']}/{MONGO['database']}"
     else:
-        URI = f'mongodb://{MONGO_SERVER}:{MONGO_PORT}'
+        URI = f"mongodb://{MONGO['server']}:{MONGO['port']}"
     with MongoClient(URI) as client:
         if mode == 'find':
-            return list(client[MONGO_DATABASE][MONGO_COLLECTION].find(filter_or_pipeline, projection, sort=sort, limit=limit))
+            return list(client[MONGO['database']][MONGO['collection']].find(filter_or_pipeline, projection, sort=sort, limit=limit))
         else:
-            return list(client[MONGO_DATABASE][MONGO_COLLECTION].aggregate(filter_or_pipeline))
+            return list(client[MONGO['database']][MONGO['collection']].aggregate(filter_or_pipeline))
 
 
 def commit(name, content):
-    url = f'https://api.github.com/repos/{GITHUB_USER}/{GITHUB_REPO}/contents/{PATH}/{name}.json'
+    try:
+        from metadata import metadata
+        GITHUB = metadata('feh_github', ERROR_IF_NONE=True)
+    except:
+        pass
+    url = f"https://api.github.com/repos/{GITHUB['user']}/{GITHUB['repo']}/contents/{GITHUB['path']}/{name}.json"
     data = {'message': name, 'content': content}
-    headers = {'Authorization': f'token {GITHUB_TOKEN}'}
+    headers = {'Authorization': f"token {GITHUB['token']}"}
     if PROXY:
         proxies = {'https': f'http://{PROXY}'}
     else:
