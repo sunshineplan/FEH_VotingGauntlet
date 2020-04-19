@@ -1,0 +1,3 @@
+2 * * * *	root /etc/feh/main.py
+0 14 10 * *	root /etc/feh/upload.py
+0 9 11 * *	root /etc/feh/backup.py
