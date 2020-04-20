@@ -31,8 +31,8 @@ MONGO = {
     'port': config.getint('mongodb', 'PORT', fallback=27017),
     'database': config.get('mongodb', 'DATABASE', fallback='feh'),
     'collection': config.get('mongodb', 'COLLECTION', fallback='feh'),
-    'username': config.get('mongodb', 'AUTH'),
-    'password': config.get('mongodb', 'PASSWORD')
+    'username': config.get('mongodb', 'AUTH', fallback='feh'),
+    'password': config.get('mongodb', 'PASSWORD', fallback='feh')
 }
 
 
