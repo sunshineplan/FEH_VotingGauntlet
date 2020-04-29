@@ -7,10 +7,15 @@ from io import BytesIO
 from smtplib import SMTP
 from subprocess import check_output
 
+try:
+    from metadata import metadata
+except:
+    def metadata(_, value): return value
+
 config = configparser.ConfigParser(allow_no_value=True)
 config.read('config.ini')
 
-SUBSCRIBE = {
+_SUBSCRIBE = {
     'sender': config.get('email', 'SENDER'),
     'smtp_server': config.get('email', 'SMTP_SERVER'),
     'smtp_server_port': config.getint('email', 'SMTP_SERVER_PORT', fallback=587),
@@ -18,7 +23,7 @@ SUBSCRIBE = {
     'subscriber': config.get('email', 'SUBSCRIBER')
 }
 
-MONGO = {
+_MONGO = {
     'server': config.get('mongodb', 'SERVER', fallback='localhost'),
     'port': config.getint('mongodb', 'PORT', fallback=27017),
     'database': config.get('mongodb', 'DATABASE', fallback='feh'),
@@ -29,12 +34,8 @@ MONGO = {
 
 
 if __name__ == '__main__':
-    try:
-        from metadata import metadata
-        SUBSCRIBE = metadata('feh_subscribe', ERROR_IF_NONE=True)
-        MONGO = metadata('feh_mongo', ERROR_IF_NONE=True)
-    except:
-        pass
+    SUBSCRIBE = metadata('feh_subscribe', _SUBSCRIBE)
+    MONGO = metadata('feh_mongo', _MONGO)
     command = f"mongodump -h{MONGO['server']}:{MONGO['port']} -d{MONGO['database']} -c{MONGO['collection']} -u{MONGO['username']} -p{MONGO['password']} --gzip --archive"
     attachment = BytesIO()
     attachment.write(check_output(command, shell=True))

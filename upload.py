@@ -9,10 +9,15 @@ from urllib.parse import quote_plus
 import requests
 from pymongo import MongoClient
 
+try:
+    from metadata import metadata
+except:
+    def metadata(_, value): return value
+
 config = configparser.ConfigParser(allow_no_value=True)
 config.read('config.ini')
 
-MONGO = {
+_MONGO = {
     'server': config.get('mongodb', 'SERVER', fallback='localhost'),
     'port': config.getint('mongodb', 'PORT', fallback=27017),
     'database': config.get('mongodb', 'DATABASE', fallback='feh'),
@@ -21,7 +26,7 @@ MONGO = {
     'password': config.get('mongodb', 'PASSWORD', fallback='feh')
 }
 
-GITHUB = {
+_GITHUB = {
     'token': config.get('github', 'TOKEN'),
     'user': config.get('github', 'USER'),
     'repo': config.get('github', 'REPO'),
@@ -32,11 +37,7 @@ PROXY = config.get('proxy', 'PROXY')
 
 
 def query(filter_or_pipeline=None, projection=None, sort=None, limit=0, mode='find'):
-    try:
-        from metadata import metadata
-        MONGO = metadata('feh_mongo', ERROR_IF_NONE=True)
-    except:
-        pass
+    MONGO = metadata('feh_mongo', _MONGO)
     if MONGO['username']:
         username = quote_plus(MONGO['username'])
         password = quote_plus(MONGO['password'])
@@ -51,11 +52,7 @@ def query(filter_or_pipeline=None, projection=None, sort=None, limit=0, mode='fi
 
 
 def commit(name, content):
-    try:
-        from metadata import metadata
-        GITHUB = metadata('feh_github', ERROR_IF_NONE=True)
-    except:
-        pass
+    GITHUB = metadata('feh_github', _GITHUB)
     url = f"https://api.github.com/repos/{GITHUB['user']}/{GITHUB['repo']}/contents/{GITHUB['path']}/{name}.json"
     data = {'message': name, 'content': content}
     headers = {'Authorization': f"token {GITHUB['token']}"}

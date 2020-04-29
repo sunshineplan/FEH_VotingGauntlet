@@ -15,10 +15,15 @@ try:
 except:
     pass
 
+try:
+    from metadata import metadata
+except:
+    def metadata(_, value): return value
+
 config = configparser.ConfigParser(allow_no_value=True)
 config.read('config.ini')
 
-SUBSCRIBE = {
+_SUBSCRIBE = {
     'sender': config.get('email', 'SENDER'),
     'smtp_server': config.get('email', 'SMTP_SERVER'),
     'smtp_server_port': config.getint('email', 'SMTP_SERVER_PORT', fallback=587),
@@ -26,7 +31,7 @@ SUBSCRIBE = {
     'subscriber': config.get('email', 'SUBSCRIBER')
 }
 
-MONGO = {
+_MONGO = {
     'server': config.get('mongodb', 'SERVER', fallback='localhost'),
     'port': config.getint('mongodb', 'PORT', fallback=27017),
     'database': config.get('mongodb', 'DATABASE', fallback='feh'),
@@ -107,11 +112,7 @@ def formatter(battle):
 
 
 def mongo(feh: FEH_VotingGauntlet):
-    try:
-        from metadata import metadata
-        MONGO = metadata('feh_mongo', ERROR_IF_NONE=True)
-    except:
-        pass
+    MONGO = metadata('feh_mongo', _MONGO)
     if MONGO['auth']:
         username = quote_plus(MONGO['username'])
         password = quote_plus(MONGO['password'])
@@ -134,11 +135,7 @@ def mongo(feh: FEH_VotingGauntlet):
 
 
 def mail(feh: FEH_VotingGauntlet):
-    try:
-        from metadata import metadata
-        SUBSCRIBE = metadata('feh_subscribe', ERROR_IF_NONE=True)
-    except:
-        pass
+    SUBSCRIBE = metadata('feh_subscribe', _SUBSCRIBE)
     Round = {1: 'Round1', 2: 'Round2', 3: 'Final Round'}
     timestamp = f"{feh.date.strftime(f'%Y%m%d')} {feh.hour}:00:00"
     msg = EmailMessage()
