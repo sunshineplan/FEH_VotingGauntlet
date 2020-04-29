@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import configparser
+import os
 from datetime import datetime
 from email.message import EmailMessage
 from io import BytesIO
@@ -13,7 +14,7 @@ except:
     def metadata(_, value): return value
 
 config = configparser.ConfigParser(allow_no_value=True)
-config.read('config.ini')
+config.read(os.path.join(os.path.dirname(__file__), 'config.ini'))
 
 _SUBSCRIBE = {
     'sender': config.get('email', 'SENDER'),

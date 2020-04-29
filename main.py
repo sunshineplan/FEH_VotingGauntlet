@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import configparser
+import os
 from datetime import date, datetime, time
 from email.message import EmailMessage
 from smtplib import SMTP
@@ -21,7 +22,7 @@ except:
     def metadata(_, value): return value
 
 config = configparser.ConfigParser(allow_no_value=True)
-config.read('config.ini')
+config.read(os.path.join(os.path.dirname(__file__), 'config.ini'))
 
 _SUBSCRIBE = {
     'sender': config.get('email', 'SENDER'),
@@ -113,7 +114,7 @@ def formatter(battle):
 
 def mongo(feh: FEH_VotingGauntlet):
     MONGO = metadata('feh_mongo', _MONGO)
-    if MONGO['auth']:
+    if MONGO['username']:
         username = quote_plus(MONGO['username'])
         password = quote_plus(MONGO['password'])
         URI = f"mongodb://{username}:{password}@{MONGO['server']}:{MONGO['port']}/{MONGO['database']}"

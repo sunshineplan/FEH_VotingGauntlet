@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import configparser
+import os
 from base64 import b64encode
 from json import dumps
 from sys import argv
@@ -15,7 +16,7 @@ except:
     def metadata(_, value): return value
 
 config = configparser.ConfigParser(allow_no_value=True)
-config.read('config.ini')
+config.read(os.path.join(os.path.dirname(__file__), 'config.ini'))
 
 _MONGO = {
     'server': config.get('mongodb', 'SERVER', fallback='localhost'),
