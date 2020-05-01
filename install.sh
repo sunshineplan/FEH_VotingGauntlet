@@ -11,7 +11,8 @@ installFEH() {
 }
 
 createCronTask() {
-	cp -s /etc/feh/feh.cron /etc/cron.d
+    cp -s /etc/feh/feh.cron /etc/cron.d/feh
+    chmod 644 /etc/feh/feh.cron
 }
 
 main() {
