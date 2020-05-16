@@ -136,16 +136,16 @@ def mongo(feh: FEH_VotingGauntlet):
 
 
 def mail(feh: FEH_VotingGauntlet):
-    SUBSCRIBE = metadata('feh_subscribe', _SUBSCRIBE)
     Round = {1: 'Round1', 2: 'Round2', 3: 'Final Round'}
     timestamp = f"{feh.date.strftime(f'%Y%m%d')} {feh.hour}:00:00"
     msg = EmailMessage()
     msg['Subject'] = f'FEH 投票大戦第{feh.current_event}回 {Round[feh.current_round]} - {timestamp}'
-    msg['From'] = SUBSCRIBE['sender']
-    msg['To'] = SUBSCRIBE['subscriber']
     content = '\n'.join([formatter(battle)
                          for battle in feh.current_scoreboard])
     msg.set_content(f'{content}\n\n{timestamp}')
+    SUBSCRIBE = metadata('feh_subscribe', _SUBSCRIBE)
+    msg['From'] = SUBSCRIBE['sender']
+    msg['To'] = SUBSCRIBE['subscriber']
     with SMTP(SUBSCRIBE['smtp_server'], SUBSCRIBE['smtp_server_port']) as s:
         s.starttls()
         s.login(SUBSCRIBE['sender'], SUBSCRIBE['password'])
