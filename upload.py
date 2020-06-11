@@ -102,6 +102,7 @@ if __name__ == '__main__':
         print(respone.json()['message'])
     name = f'FEH 投票大戦第{event}回結果一覧'
     pipeline = []
+    pipeline.append({'$match': {'event': event}})
     pipeline.append({'$addFields': {'tmp': '$scoreboard'}})
     pipeline.append({'$unwind': '$tmp'})
     pipeline.append({'$group': {'_id': {'r': '$round', 'h': '$tmp.hero'},
